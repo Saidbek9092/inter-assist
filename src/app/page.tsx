@@ -118,6 +118,15 @@ export default function Home() {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationInterval, setGenerationInterval] = useState<NodeJS.Timeout | null>(null);
   const [showUploadInput, setShowUploadInput] = useState(true);
+  const [isUrlValid, setIsUrlValid] = useState(false);
+
+  // URL validation regex
+  const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+
+  // Validate URL when it changes
+  useEffect(() => {
+    setIsUrlValid(urlRegex.test(url));
+  }, [url]);
 
   const mockQuestions: Question[] = [
     { id: "q1", text: "What is React?" },
@@ -683,15 +692,18 @@ export default function Home() {
               <div className="flex flex-col gap-3 mb-8">
                 <Input
                   type="text"
-                  placeholder="Paste job description or keywords"
+                  placeholder="Enter the job description link: e.g. https://jobs.com/software-engineer-123456"
                   className="text-lg h-12"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   disabled={isLoading || questions.length > 0}
                 />
+                {url && !isUrlValid && (
+                  <p className="text-gray-800 text-sm font-medium">Please enter a valid job description URL</p>
+                )}
                 <Button
                   onClick={handleSubmit}
-                  disabled={!url || isLoading || questions.length > 0}
+                  disabled={!url || !isUrlValid || isLoading || questions.length > 0}
                   className="text-lg px-6 h-12"
                 >
                   {isLoading ? "Generating..." : "Generate"}
