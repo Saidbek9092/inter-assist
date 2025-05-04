@@ -11,8 +11,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import Evaluation from '@/components/Evaluation'
-import EvaluationResult from '@/components/EvaluationResult'
 import { CheckCircle2, XCircle } from 'lucide-react'
 
 type Question = {
@@ -27,21 +25,6 @@ type Session = {
   createdAt: number
   role?: string
   company?: string
-}
-
-type EvaluationResult = {
-  questionMatch: string
-  score: number
-  feedback: string
-  pass: boolean
-  confidence: number
-}
-
-type QuestionEvaluation = {
-  [key: string]: {
-    result: EvaluationResult
-    isExpanded: boolean
-  } | null
 }
 
 type AnalysisResult = {
@@ -80,7 +63,6 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [evaluationResults, setEvaluationResults] = useState<QuestionEvaluation>({});
   const [isLoading, setIsLoading] = useState(false)
   const [questions, setQuestions] = useState<Question[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
@@ -121,11 +103,11 @@ export default function Home() {
       const res = await fetch('/api/sessions');
       const data = await res.json();
       console.log("Received sessions data:", data);
-      
+
       if (Array.isArray(data)) {
         // Only set sessions if they have questions
         const sessionsWithQuestions = data.filter(session => session.questions && session.questions.length > 0);
-        console.log(`Setting ${sessionsWithQuestions.length} sessions with questions:`, 
+        console.log(`Setting ${sessionsWithQuestions.length} sessions with questions:`,
           sessionsWithQuestions.map(s => ({
             id: s.id,
             timestamp: s.createdAt,
@@ -192,7 +174,7 @@ export default function Home() {
     try {
       setIsLoading(true);
       console.log("Starting question generation for URL:", url);
-      
+
       const response = await fetch('/api/generate-questions', {
         method: 'POST',
         headers: {
@@ -208,7 +190,7 @@ export default function Home() {
 
       const data = await response.json();
       console.log("Received questions from API:", data.questions);
-      
+
       const generatedQuestions: Question[] = (data.questions || []).map((text: string, index: number) => ({
         id: `q${index + 1}`,
         text
@@ -278,13 +260,13 @@ export default function Home() {
         });
 
         // Update sessions list with the updated session
-        const updatedSessions = sessions.map(session => 
+        const updatedSessions = sessions.map(session =>
           session.id === activeSessionId ? savedSession : session
         );
         setSessions(updatedSessions);
         setQuestions(generatedQuestions);
       }
-      
+
       // setError(null);
     } catch (error) {
       console.error('Error in generateQuestions:', error);
@@ -298,15 +280,15 @@ export default function Home() {
   // Start a new session
   const handleNewSession = () => {
     // Check if there's already an empty session
-    const hasEmptySession = sessions.some(session => 
-      session.jobDescription === "" && 
+    const hasEmptySession = sessions.some(session =>
+      session.jobDescription === "" &&
       session.questions.length === 0
     );
 
     if (hasEmptySession) {
       // Find the empty session and make it active
-      const emptySession = sessions.find(session => 
-        session.jobDescription === "" && 
+      const emptySession = sessions.find(session =>
+        session.jobDescription === "" &&
         session.questions.length === 0
       );
       if (emptySession) {
@@ -332,10 +314,10 @@ export default function Home() {
       timestamp: newSession.createdAt,
       date: new Date(newSession.createdAt).toISOString()
     });
-    
+
     // Update sessions list with the new session
     setSessions(prev => [newSession, ...prev]);
-    
+
     // Update active session and clear related states
     setActiveSessionId(newSession.id);
     setUrl("");
@@ -348,53 +330,43 @@ export default function Home() {
   // Delete session handler
   const handleDeleteSession = async () => {
     if (!deleteSessionId) return;
-    
+
     try {
       console.log("Deleting session:", deleteSessionId);
-      const response = await fetch(`/api/sessions?id=${deleteSessionId}`, { 
-        method: 'DELETE' 
+      const response = await fetch(`/api/sessions?id=${deleteSessionId}`, {
+        method: 'DELETE'
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to delete session');
       }
-      
+
       // Refetch sessions after successful deletion
       const sessionsResponse = await fetch('/api/sessions');
       if (!sessionsResponse.ok) {
         throw new Error('Failed to fetch updated sessions');
       }
-      
+
       const updatedSessions = await sessionsResponse.json();
       console.log("Updated sessions after deletion:", updatedSessions);
-      
+
       setSessions(updatedSessions);
-      
+
       // If the deleted session was active, clear selection
       if (activeSessionId === deleteSessionId) {
         setActiveSessionId(updatedSessions.length > 0 ? updatedSessions[0].id : null);
         setUrl("");
         setQuestions([]);
       }
-      
+
     } catch (err) {
       console.error("Error deleting session:", err);
     } finally {
       setDeleteSessionId(null);
     }
   };
-
-  const handleEvaluationComplete = (questionId: string, result: EvaluationResult) => {
-    setEvaluationResults(prev => ({
-      ...prev,
-      [questionId]: {
-        result,
-        isExpanded: true
-      }
-    }))
-  }
 
   const startProgressAnimation = () => {
     setAnalysisProgress(0);
@@ -412,7 +384,7 @@ export default function Home() {
 
   const handleFileUpload = async (e: FileUploadEvent) => {
     let selectedFile: File | null = null;
-    
+
     if ('dataTransfer' in e) {
       e.preventDefault();
       e.stopPropagation();
@@ -429,12 +401,12 @@ export default function Home() {
       setShowUploadInput(false);
       setAnalysisProgress(0);
       startProgressAnimation();
-      
+
       try {
         const formData = new FormData();
         formData.append('audio', selectedFile);
         formData.append('questions', JSON.stringify(questions));
-        
+
         console.log('Questions being sent to API:', questions.map(q => q.text));
 
         const response = await fetch('/api/analyze-audio', {
@@ -500,10 +472,10 @@ export default function Home() {
             console.log("Rendering session:", session);
             // Validate and format the date
             const date = new Date(session.createdAt);
-            const formattedDate = isNaN(date.getTime()) 
-              ? 'Invalid date' 
+            const formattedDate = isNaN(date.getTime())
+              ? 'Invalid date'
               : date.toLocaleString();
-            
+
             console.log("Session date:", {
               raw: session.createdAt,
               parsed: date,
@@ -542,15 +514,15 @@ export default function Home() {
             </DialogHeader>
             <div>Are you sure you want to delete this session? This action cannot be undone.</div>
             <DialogFooter>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setDeleteSessionId(null)}
                 className="cursor-pointer"
               >
                 Cancel
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleDeleteSession}
                 className="cursor-pointer"
               >
@@ -591,22 +563,22 @@ export default function Home() {
                 >
                   {isLoading ? "Generating..." : "Generate"}
                 </Button>
-                
+
                 {isLoading && (
                   <div className="mb-4">
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="bg-gray-600 h-2.5 rounded-full transition-all duration-300" 
+                      <div
+                        className="bg-gray-600 h-2.5 rounded-full transition-all duration-300"
                         style={{ width: `${generationProgress}%` }}
                       ></div>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">Generating questions... {generationProgress}%</p>
                   </div>
                 )}
-                
+
                 {questions.length > 0 && showUploadInput && (
                   <div className="mt-4">
-                    <label 
+                    <label
                       className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
@@ -636,8 +608,8 @@ export default function Home() {
                 <div className="text-center py-8">
                   <div className="mb-4">
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="bg-gray-600 h-2.5 rounded-full transition-all duration-300" 
+                      <div
+                        className="bg-gray-600 h-2.5 rounded-full transition-all duration-300"
                         style={{ width: `${analysisProgress}%` }}
                       ></div>
                     </div>
@@ -659,8 +631,8 @@ export default function Home() {
                 <div className="text-center py-8">
                   <div className="mb-4">
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="bg-gray-600 h-2.5 rounded-full transition-all duration-300" 
+                      <div
+                        className="bg-gray-600 h-2.5 rounded-full transition-all duration-300"
                         style={{ width: `${analysisProgress}%` }}
                       ></div>
                     </div>
@@ -781,20 +753,7 @@ export default function Home() {
                         <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white font-semibold">
                           {i + 1}
                         </span>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
                             <span className="text-base flex items-center h-full">{q.text}</span>
-                            <Evaluation
-                              question={q.text}
-                              onEvaluationComplete={(result) => handleEvaluationComplete(q.id, result)}
-                            />
-                          </div>
-                          {evaluationResults[q.id] && (
-                            <div className="mt-4">
-                              <EvaluationResult result={evaluationResults[q.id]!.result} />
-                            </div>
-                          )}
-                        </div>
                       </div>
                     </div>
                   ))}

@@ -26,7 +26,7 @@ export async function GET() {
       .toArray();
     
     // Validate and format dates
-    const validatedSessions = sessions.map((session: Session) => {
+    const validatedSessions = sessions.map((session: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       const date = new Date(session.createdAt);
       if (isNaN(date.getTime())) {
         console.warn("Invalid date found in session:", session.id, session.createdAt);
