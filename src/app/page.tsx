@@ -72,6 +72,8 @@ export default function Home() {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationInterval, setGenerationInterval] = useState<NodeJS.Timeout | null>(null);
   const [showUploadInput, setShowUploadInput] = useState(true);
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [isUrlValid, setIsUrlValid] = useState(false);
 
   useEffect(() => {
     const urlRegex = /\/role\/([^/]+)\/company\/([^/]+)/;
@@ -160,6 +162,50 @@ export default function Home() {
     if (generationInterval) {
       clearInterval(generationInterval);
       setGenerationInterval(null);
+    }
+  };
+
+  const validateUrl = (input: string) => {
+    try {
+      // Check if the input is a valid URL
+      new URL(input);
+      // Check if the URL has a valid protocol (http or https)
+      if (!input.startsWith('http://') && !input.startsWith('https://')) {
+        setUrlError('Please enter a valid URL starting with http:// or https://');
+        setIsUrlValid(false);
+        return false;
+      }
+      // Check if the URL has a valid domain (at least one dot)
+      if (!input.includes('.')) {
+        setUrlError('Please enter a valid URL with a domain name');
+        setIsUrlValid(false);
+        return false;
+      }
+      setUrlError(null);
+      setIsUrlValid(true);
+      return true;
+    } catch (error) {
+      console.error('Error validating URL:', error);
+      setUrlError('Please enter the correct URL or link');
+      setIsUrlValid(false);
+      return false;
+    }
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+    if (newUrl) {
+      validateUrl(newUrl);
+    } else {
+      setUrlError(null);
+      setIsUrlValid(false);
+    }
+  };
+
+  const handleUrlBlur = () => {
+    if (url) {
+      validateUrl(url);
     }
   };
 
@@ -551,14 +597,18 @@ export default function Home() {
                 <Input
                   type="text"
                   placeholder="Enter the job description link: e.g. https://jobs.com/software-engineer-123456"
-                  className="text-lg h-12"
+                  className={`text-lg h-12 ${urlError ? 'border-gray-300' : ''}`}
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={handleUrlChange}
+                  onBlur={handleUrlBlur}
                   disabled={isLoading || questions.length > 0}
                 />
+                {urlError && (
+                  <p className="text-gray-800 text-sm mt-1 font-medium">{urlError}</p>
+                )}
                 <Button
                   onClick={handleSubmit}
-                  disabled={!url || isLoading || questions.length > 0}
+                  disabled={!isUrlValid || isLoading || questions.length > 0}
                   className="text-lg px-6 h-12 cursor-pointer"
                 >
                   {isLoading ? "Generating..." : "Generate"}
