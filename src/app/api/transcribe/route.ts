@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     try {
       // Transcribe using OpenAI Whisper
       const transcription = await openai.audio.transcriptions.create({
-        file: createReadStream(tempFilePath) as any,
+        file: createReadStream(tempFilePath) as unknown as File,
         model: "whisper-1",
         language: "en",
       });

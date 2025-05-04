@@ -95,7 +95,18 @@ function generateUniqueId() {
 }
 
 export default function Home() {
-  const [url, setUrl] = useState("")
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [jobDescription, setJobDescription] = useState("");
+  const [url, setUrl] = useState("");
+  const [isUrlValid, setIsUrlValid] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evaluationResults, setEvaluationResults] = useState<QuestionEvaluation>({});
+  const [showEvaluation, setShowEvaluation] = useState(false);
+  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
+  const [isProgressAnimating, setIsProgressAnimating] = useState(false);
   const [isLoading, setIsLoading] = useState(false)
   const [questions, setQuestions] = useState<Question[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -103,30 +114,41 @@ export default function Home() {
   const [showAddInput, setShowAddInput] = useState(false)
   const [newQuestion, setNewQuestion] = useState("")
   const [copySuccess, setCopySuccess] = useState(false)
-  const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null)
-  const [questionEvaluations, setQuestionEvaluations] = useState<QuestionEvaluation>({})
   const [file, setFile] = useState<File | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
   const [transcription, setTranscription] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState(0)
-  const [isUploading, setIsUploading] = useState(false)
   const [progressInterval, setProgressInterval] = useState<NodeJS.Timeout | null>(null)
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationInterval, setGenerationInterval] = useState<NodeJS.Timeout | null>(null);
   const [showUploadInput, setShowUploadInput] = useState(true);
-  const [isUrlValid, setIsUrlValid] = useState(false);
 
-  // URL validation regex
-  const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+  const urlRegex = /\/role\/([^/]+)\/company\/([^/]+)/;
 
-  // Validate URL when it changes
   useEffect(() => {
-    setIsUrlValid(urlRegex.test(url));
-  }, [url]);
+    const urlMatch = urlRegex.exec(window.location.href);
+    if (urlMatch) {
+      const role = urlMatch[1];
+      const company = urlMatch[2];
+      setJobDescription(`Role: ${role}\nCompany: ${company}\n\n`);
+    }
+  }, [urlRegex]);
+
+  const stopProgressAnimation = () => {
+    setIsProgressAnimating(false);
+  };
+
+  useEffect(() => {
+    if (sessions.length > 0) {
+      setIsProgressAnimating(true);
+    }
+    return () => {
+      stopProgressAnimation();
+    };
+  }, [sessions]);
 
   const mockQuestions: Question[] = [
     { id: "q1", text: "What is React?" },
@@ -190,7 +212,7 @@ export default function Home() {
       setFile(null);
       setShowUploadInput(true);
       setIsUploading(false);
-      setIsAnalyzing(false);
+      setIsGenerating(false);
       setAnalysisProgress(0);
       stopProgressAnimation();
     }
@@ -401,7 +423,7 @@ export default function Home() {
         setFile(null);
         setShowUploadInput(true);
         setIsUploading(false);
-        setIsAnalyzing(false);
+        setIsGenerating(false);
         setAnalysisProgress(0);
         stopProgressAnimation();
       }
@@ -433,7 +455,7 @@ export default function Home() {
     setFile(null);
     setShowUploadInput(true);
     setIsUploading(false);
-    setIsAnalyzing(false);
+    setIsGenerating(false);
     setAnalysisProgress(0);
     stopProgressAnimation();
   }
@@ -482,7 +504,7 @@ export default function Home() {
   };
 
   const handleEvaluationComplete = (questionId: string, result: EvaluationResult) => {
-    setQuestionEvaluations(prev => ({
+    setEvaluationResults(prev => ({
       ...prev,
       [questionId]: {
         result,
@@ -492,7 +514,7 @@ export default function Home() {
   }
 
   const toggleEvaluation = (questionId: string) => {
-    setQuestionEvaluations(prev => ({
+    setEvaluationResults(prev => ({
       ...prev,
       [questionId]: prev[questionId] ? {
         ...prev[questionId]!,
@@ -513,13 +535,6 @@ export default function Home() {
       });
     }, 100); // Update every 100ms
     setProgressInterval(interval);
-  };
-
-  const stopProgressAnimation = () => {
-    if (progressInterval) {
-      clearInterval(progressInterval);
-      setProgressInterval(null);
-    }
   };
 
   const handleFileUpload = async (e: FileUploadEvent) => {
@@ -566,7 +581,7 @@ export default function Home() {
       } finally {
         stopProgressAnimation();
         setIsUploading(false);
-        setIsAnalyzing(false);
+        setIsGenerating(false);
       }
     }
   };
@@ -772,7 +787,7 @@ export default function Home() {
                 </div>
               )}
 
-              {isAnalyzing && (
+              {isGenerating && (
                 <div className="text-center py-8">
                   <div className="mb-4">
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -781,7 +796,7 @@ export default function Home() {
                         style={{ width: `${analysisProgress}%` }}
                       ></div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-2">Analyzing your answers... {analysisProgress}%</p>
+                    <p className="text-sm text-gray-600 mt-2">Generating questions... {analysisProgress}%</p>
                   </div>
                 </div>
               )}
@@ -906,9 +921,9 @@ export default function Home() {
                               onEvaluationComplete={(result) => handleEvaluationComplete(q.id, result)}
                             />
                           </div>
-                          {questionEvaluations[q.id] && (
+                          {evaluationResults[q.id] && (
                             <div className="mt-4">
-                              <EvaluationResult result={questionEvaluations[q.id]!.result} />
+                              <EvaluationResult result={evaluationResults[q.id]!.result} />
                             </div>
                           )}
                         </div>

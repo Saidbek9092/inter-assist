@@ -1,7 +1,5 @@
 import { useState, useRef } from 'react'
-import { Button } from './ui/button'
 import { AudioRecorder } from '@/lib/audioRecorder'
-import { Play, Square, Loader2 } from 'lucide-react'
 
 type EvaluationResult = {
   questionMatch: string
@@ -17,8 +15,6 @@ type EvaluationProps = {
 }
 
 export default function Evaluation({ question, onEvaluationComplete }: EvaluationProps) {
-  const [isRecording, setIsRecording] = useState(false)
-  const [isEvaluating, setIsEvaluating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const audioRecorder = useRef<AudioRecorder | null>(null)
 
@@ -26,13 +22,10 @@ export default function Evaluation({ question, onEvaluationComplete }: Evaluatio
     try {
       audioRecorder.current = new AudioRecorder()
       const success = await audioRecorder.current.startRecording()
-      if (success) {
-        setIsRecording(true)
-        setError(null)
-      } else {
+      if (!success) {
         setError('Failed to start recording')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to access microphone')
     }
   }
@@ -41,8 +34,6 @@ export default function Evaluation({ question, onEvaluationComplete }: Evaluatio
     if (!audioRecorder.current) return
 
     try {
-      setIsRecording(false)
-      setIsEvaluating(true)
       const audioBlob = await audioRecorder.current.stopRecording()
       
       if (!audioBlob) {
@@ -69,7 +60,6 @@ export default function Evaluation({ question, onEvaluationComplete }: Evaluatio
       await handleEvaluate(transcript)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process recording')
-      setIsEvaluating(false)
     }
   }
 
@@ -96,8 +86,6 @@ export default function Evaluation({ question, onEvaluationComplete }: Evaluatio
       onEvaluationComplete(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to evaluate answer')
-    } finally {
-      setIsEvaluating(false)
     }
   }
 
