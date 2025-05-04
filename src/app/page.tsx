@@ -704,7 +704,7 @@ export default function Home() {
                 <Button
                   onClick={handleSubmit}
                   disabled={!url || !isUrlValid || isLoading || questions.length > 0}
-                  className="text-lg px-6 h-12"
+                  className="text-lg px-6 h-12 cursor-pointer"
                 >
                   {isLoading ? "Generating..." : "Generate"}
                 </Button>
