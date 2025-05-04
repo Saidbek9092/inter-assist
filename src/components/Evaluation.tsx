@@ -58,8 +58,8 @@ export default function Evaluation({ question, onEvaluationComplete }: Evaluatio
       
       // Evaluate the transcript
       await handleEvaluate(transcript)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process recording')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to process recording')
     }
   }
 
@@ -84,8 +84,8 @@ export default function Evaluation({ question, onEvaluationComplete }: Evaluatio
 
       const result = await response.json()
       onEvaluationComplete(result)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to evaluate answer')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to evaluate answer')
     }
   }
 

@@ -513,16 +513,6 @@ export default function Home() {
     }))
   }
 
-  const toggleEvaluation = (questionId: string) => {
-    setEvaluationResults(prev => ({
-      ...prev,
-      [questionId]: prev[questionId] ? {
-        ...prev[questionId]!,
-        isExpanded: !prev[questionId]!.isExpanded
-      } : null
-    }))
-  }
-
   const startProgressAnimation = () => {
     setAnalysisProgress(0);
     const interval = setInterval(() => {
