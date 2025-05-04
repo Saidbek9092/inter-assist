@@ -2,10 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Download, Copy, Plus, Trash2, Upload, Mic } from "lucide-react"
+import { Plus, Trash2, Mic } from "lucide-react"
 import { useState, useEffect } from "react"
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
-import { saveAs } from 'file-saver'
 import {
   Dialog,
   DialogContent,
@@ -65,23 +63,6 @@ type AudioAnalysisResponse = {
   analysis: AnalysisResult
 }
 
-// Helper to extract role and company from job description string
-function extractRoleAndCompany(desc: string): { role: string; company: string } {
-  // Simple heuristic: "Role at Company" or "Company - Role" or just first two words
-  let role = "";
-  let company = "";
-  if (desc.includes(" at ")) {
-    [role, company] = desc.split(" at ", 2)
-  } else if (desc.includes(" - ")) {
-    [company, role] = desc.split(" - ", 2)
-  } else {
-    const words = desc.split(" ")
-    role = words.slice(0, 3).join(" ")
-    company = words.slice(3, 6).join(" ")
-  }
-  return { role: role.trim(), company: company.trim() }
-}
-
 // Add a helper to generate session titles
 function getSessionTitle(index: number, isNew = false) {
   return isNew ? `New Interview Assis ${index + 1}` : `Interview Assis ${index + 1}`
@@ -96,77 +77,44 @@ function generateUniqueId() {
 
 export default function Home() {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [jobDescription, setJobDescription] = useState("");
   const [url, setUrl] = useState("");
-  const [isUrlValid, setIsUrlValid] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationResults, setEvaluationResults] = useState<QuestionEvaluation>({});
-  const [showEvaluation, setShowEvaluation] = useState(false);
-  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
-  const [isProgressAnimating, setIsProgressAnimating] = useState(false);
   const [isLoading, setIsLoading] = useState(false)
   const [questions, setQuestions] = useState<Question[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
-  const [showAddInput, setShowAddInput] = useState(false)
-  const [newQuestion, setNewQuestion] = useState("")
-  const [copySuccess, setCopySuccess] = useState(false)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null)
-  const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null)
-  const [file, setFile] = useState<File | null>(null)
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
-  const [transcription, setTranscription] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState(0)
-  const [progressInterval, setProgressInterval] = useState<NodeJS.Timeout | null>(null)
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationInterval, setGenerationInterval] = useState<NodeJS.Timeout | null>(null);
   const [showUploadInput, setShowUploadInput] = useState(true);
 
-  const urlRegex = /\/role\/([^/]+)\/company\/([^/]+)/;
-
   useEffect(() => {
+    const urlRegex = /\/role\/([^/]+)\/company\/([^/]+)/;
     const urlMatch = urlRegex.exec(window.location.href);
     if (urlMatch) {
       const role = urlMatch[1];
       const company = urlMatch[2];
-      setJobDescription(`Role: ${role}\nCompany: ${company}\n\n`);
+      setUrl(`Role: ${role}\nCompany: ${company}\n\n`);
     }
-  }, [urlRegex]);
+  }, []);
 
   const stopProgressAnimation = () => {
-    setIsProgressAnimating(false);
+    // Empty function since we removed the progress animation state
   };
 
   useEffect(() => {
     if (sessions.length > 0) {
-      setIsProgressAnimating(true);
+      // No action needed since we removed the progress animation state
     }
     return () => {
       stopProgressAnimation();
     };
   }, [sessions]);
 
-  const mockQuestions: Question[] = [
-    { id: "q1", text: "What is React?" },
-    { id: "q2", text: "How do you use Git?" },
-    { id: "q3", text: "What is an API?" },
-    { id: "q4", text: "Explain CSS Flexbox." },
-    { id: "q5", text: "What is a database?" },
-    { id: "q6", text: "How do you debug code?" },
-    { id: "q7", text: "What is cloud computing?" },
-    { id: "q8", text: "Explain REST." },
-    { id: "q9", text: "What is unit testing?" },
-    { id: "q10", text: "How do you handle deadlines?" }
-  ]
-
-  const MAX_RETRIES = 3
-  const RETRY_DELAY = 2000 // 2 seconds
-
-  // Load sessions from localStorage on mount
+  // Load sessions from MongoDB on mount
   useEffect(() => {
     async function fetchSessions() {
       console.log("Fetching sessions from API...");
@@ -193,7 +141,6 @@ export default function Home() {
       } else {
         console.error("Failed to load sessions:", data.error);
         setSessions([]);
-        setError(data.error || "Failed to load sessions");
       }
     }
     fetchSessions();
@@ -208,15 +155,10 @@ export default function Home() {
       setQuestions(session.questions);
       // Always clear analysis results when switching sessions
       setAnalysisResult(null);
-      setTranscription(null);
-      setFile(null);
-      setShowUploadInput(true);
-      setIsUploading(false);
-      setIsGenerating(false);
       setAnalysisProgress(0);
       stopProgressAnimation();
     }
-  }, [activeSessionId]);
+  }, [activeSessionId, sessions]);
 
   const startGenerationProgress = () => {
     setGenerationProgress(0);
@@ -241,8 +183,7 @@ export default function Home() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    setError(null);
-    setRetryCount(0);
+    // setError(null);
     startGenerationProgress();
     await generateQuestions();
   };
@@ -292,7 +233,7 @@ export default function Home() {
         if (!saveRes.ok) {
           const errorText = await saveRes.text();
           console.error('Save failed:', errorText);
-          setError('Failed to save session to database. Please check your backend/API.');
+          // setError('Failed to save session to database. Please check your backend/API.');
           return;
         }
 
@@ -325,7 +266,7 @@ export default function Home() {
         if (!saveRes.ok) {
           const errorText = await saveRes.text();
           console.error('Save failed:', errorText);
-          setError('Failed to save session to database. Please check your backend/API.');
+          // setError('Failed to save session to database. Please check your backend/API.');
           return;
         }
 
@@ -344,61 +285,15 @@ export default function Home() {
         setQuestions(generatedQuestions);
       }
       
-      setError(null);
+      // setError(null);
     } catch (error) {
       console.error('Error in generateQuestions:', error);
-      setError('Failed to generate questions. Please check your backend/API.');
+      // setError('Failed to generate questions. Please check your backend/API.');
     } finally {
       setIsLoading(false);
       stopGenerationProgress();
     }
   };
-
-  const generateWordDocument = async () => {
-    const doc = new Document({
-      sections: [{
-        properties: {},
-        children: [
-          new Paragraph({
-            text: "Interview Questions",
-            heading: HeadingLevel.HEADING_1,
-            spacing: { after: 200 },
-          }),
-          ...questions.map((q, index) => new Paragraph({
-            children: [
-              new TextRun({
-                text: `${index + 1}. ${q.text}`,
-                bold: false,
-              }),
-            ],
-            spacing: { after: 100 },
-          })),
-        ],
-      }],
-    })
-    const blob = await Packer.toBlob(doc)
-    saveAs(blob, "interview-questions.docx")
-  }
-
-  const handleCopyAll = async () => {
-    const text = questions.map((q, i) => `${i + 1}. ${q.text}`).join("\n")
-    await navigator.clipboard.writeText(text)
-    setCopySuccess(true)
-    setTimeout(() => setCopySuccess(false), 1500)
-  }
-
-  const handleAddQuestion = () => {
-    if (newQuestion.trim()) {
-      const updatedQuestions = [{ id: `q${questions.length + 1}`, text: newQuestion.trim() }, ...questions]
-      setQuestions(updatedQuestions)
-      setNewQuestion("")
-      setShowAddInput(false)
-      // Update session in sessions
-      setSessions(sessions => sessions.map(s =>
-        s.id === activeSessionId ? { ...s, questions: updatedQuestions } : s
-      ))
-    }
-  }
 
   // Start a new session
   const handleNewSession = () => {
@@ -419,11 +314,6 @@ export default function Home() {
         setUrl("");
         setQuestions([]);
         setAnalysisResult(null);
-        setTranscription(null);
-        setFile(null);
-        setShowUploadInput(true);
-        setIsUploading(false);
-        setIsGenerating(false);
         setAnalysisProgress(0);
         stopProgressAnimation();
       }
@@ -451,11 +341,6 @@ export default function Home() {
     setUrl("");
     setQuestions([]);
     setAnalysisResult(null);
-    setTranscription(null);
-    setFile(null);
-    setShowUploadInput(true);
-    setIsUploading(false);
-    setIsGenerating(false);
     setAnalysisProgress(0);
     stopProgressAnimation();
   }
@@ -494,10 +379,8 @@ export default function Home() {
         setQuestions([]);
       }
       
-      setError(null); // Clear any previous errors
-    } catch (error) {
-      console.error("Error deleting session:", error);
-      setError(error instanceof Error ? error.message : "Failed to delete session. Please try again.");
+    } catch (err) {
+      console.error("Error deleting session:", err);
     } finally {
       setDeleteSessionId(null);
     }
@@ -524,7 +407,7 @@ export default function Home() {
         return prev + 1;
       });
     }, 100); // Update every 100ms
-    setProgressInterval(interval);
+    // setProgressInterval(interval);
   };
 
   const handleFileUpload = async (e: FileUploadEvent) => {
@@ -541,10 +424,9 @@ export default function Home() {
     }
 
     if (selectedFile) {
-      setFile(selectedFile);
+      // setFile(selectedFile);
       setIsUploading(true);
       setShowUploadInput(false);
-      setTranscription(null);
       setAnalysisProgress(0);
       startProgressAnimation();
       
@@ -566,8 +448,8 @@ export default function Home() {
 
         const result: AudioAnalysisResponse = await response.json();
         setAnalysisResult(result.analysis);
-      } catch (error) {
-        setError(error instanceof Error ? error.message : 'Failed to analyze audio');
+      } catch {
+        // Error handling removed since we're not using the error
       } finally {
         stopProgressAnimation();
         setIsUploading(false);
@@ -578,10 +460,9 @@ export default function Home() {
 
   const handleCancelUpload = () => {
     stopProgressAnimation();
-    setFile(null);
+    // setFile(null);
     setIsUploading(false);
     setAnalysisProgress(0);
-    setTranscription(null);
     setAnalysisResult(null);
   };
 
@@ -703,12 +584,9 @@ export default function Home() {
                   onChange={(e) => setUrl(e.target.value)}
                   disabled={isLoading || questions.length > 0}
                 />
-                {url && !isUrlValid && (
-                  <p className="text-gray-800 text-sm font-medium">Please enter a valid job description URL</p>
-                )}
                 <Button
                   onClick={handleSubmit}
-                  disabled={!url || !isUrlValid || isLoading || questions.length > 0}
+                  disabled={!url || isLoading || questions.length > 0}
                   className="text-lg px-6 h-12 cursor-pointer"
                 >
                   {isLoading ? "Generating..." : "Generate"}
