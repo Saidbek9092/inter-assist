@@ -441,6 +441,7 @@ export default function Home() {
       } finally {
         setIsUploading(false);
         setIsGenerating(false);
+        setShowUploadInput(true);
       }
     }
   };
@@ -449,6 +450,13 @@ export default function Home() {
     stopProgressAnimation();
     setIsUploading(false);
     setAnalysisResult(null);
+    setShowUploadInput(true);
+  };
+
+  const handleCancelGeneration = () => {
+    setIsLoading(false);
+    setQuestions([]);
+    setShowUploadInput(true);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
@@ -644,10 +652,7 @@ export default function Home() {
                         variant="ghost"
                         size="sm"
                         className="absolute top-0 right-0 text-gray-500 hover:text-gray-700 cursor-pointer text-base"
-                        onClick={() => {
-                          setIsLoading(false);
-                          setQuestions([]);
-                        }}
+                        onClick={handleCancelGeneration}
                       >
                         Cancel
                       </Button>
@@ -657,7 +662,7 @@ export default function Home() {
                     </div>
                   )}
 
-                  {questions.length > 0 && showUploadInput && (
+                  {(questions.length > 0 || analysisResult) && showUploadInput && (
                     <div className="mt-4">
                       <label
                         className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
@@ -681,26 +686,26 @@ export default function Home() {
                       </label>
                     </div>
                   )}
+
+                  {isUploading && (
+                    <div className="relative flex flex-col items-center justify-center py-8">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-0 right-0 text-gray-500 hover:text-gray-700 cursor-pointer text-base"
+                        onClick={handleCancelUpload}
+                      >
+                        Cancel
+                      </Button>
+                      <Loader2 className="h-10 w-10 animate-spin text-gray-600 mb-4" />
+                      <p className="text-gray-600 text-lg">Processing your audio...</p>
+                      <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                {isUploading && (
-                  <div className="relative flex flex-col items-center justify-center py-8">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute top-0 right-0 text-gray-500 hover:text-gray-700 cursor-pointer text-base"
-                      onClick={handleCancelUpload}
-                    >
-                      Cancel
-                    </Button>
-                    <Loader2 className="h-10 w-10 animate-spin text-gray-600 mb-4" />
-                    <p className="text-gray-600 text-lg">Processing your audio...</p>
-                    <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
-                  </div>
-                )}
-
                 {isGenerating && (
                   <div className="text-center py-8">
                     <div className="mb-4">

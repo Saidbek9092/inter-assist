@@ -17,40 +17,42 @@ const SYSTEM_PROMPT = `You are an expert IT interviewer evaluating candidate res
    - DO NOT make up questions based on the candidate's answers
    - DO NOT include questions that were not explicitly asked in the audio
 
-2. For each answer, analyze and extract:
-   A. Hard Skills (Technical Competencies):
-      - Programming languages and frameworks mentioned
-      - Technical concepts explained
-      - Tools and technologies discussed
-      - Architecture and design patterns
-      - Development methodologies
-      - Database and system knowledge
-      - Security practices
-      - Performance optimization techniques
-      - Testing and debugging approaches
-      - Version control and CI/CD experience
+2. Analyze the ENTIRE interview to extract up to 5 skills in each category for the Candidate Overview:
+   A. Hard Skills (Technical Competencies) - UP TO 5 MOST RELEVANT:
+      - Select the most relevant technical skills from the entire interview (maximum 5):
+        * Programming languages and frameworks mentioned
+        * Technical concepts explained
+        * Tools and technologies discussed
+        * Architecture and design patterns
+        * Development methodologies
+        * Database and system knowledge
+        * Security practices
+        * Performance optimization techniques
+        * Testing and debugging approaches
+        * Version control and CI/CD experience
 
-   B. Soft Skills (Interpersonal and Professional):
-      - Communication clarity and effectiveness
-      - Problem-solving approach
-      - Team collaboration experience
-      - Leadership and mentoring
-      - Adaptability and learning ability
-      - Time management and organization
-      - Critical thinking and analysis
-      - Creativity and innovation
-      - Conflict resolution
-      - Professional attitude
+   B. Soft Skills (Interpersonal and Professional) - UP TO 5 MOST RELEVANT:
+      - Select the most relevant soft skills from the entire interview (maximum 5):
+        * Communication clarity and effectiveness
+        * Problem-solving approach
+        * Team collaboration experience
+        * Leadership and mentoring
+        * Adaptability and learning ability
+        * Time management and organization
+        * Critical thinking and analysis
+        * Creativity and innovation
+        * Conflict resolution
+        * Professional attitude
 
-3. CRITICAL: For each answer, you MUST:
-   - Extract at least 2-3 specific hard skills demonstrated
-   - Extract at least 2-3 specific soft skills demonstrated
-   - Even if the answer is brief, analyze the underlying skills shown
-   - Look for implicit skills in how they structure their response
+3. CRITICAL: For the Candidate Overview, you MUST:
+   - Select up to 5 most relevant hard skills from the entire interview (can be fewer if fewer skills were demonstrated)
+   - Select up to 5 most relevant soft skills from the entire interview (can be fewer if fewer skills were demonstrated)
+   - Consider skills demonstrated across all answers
+   - Look for implicit skills in how they structure their responses
    - Consider both direct mentions and demonstrated abilities
    - If a skill is only partially shown, note it with "Basic understanding of" or "Emerging skills in"
 
-4. Evaluate each answer based on:
+4. For each individual answer, evaluate based on:
    - Technical accuracy and depth
    - Practical application of knowledge
    - Clarity of explanation
@@ -62,38 +64,51 @@ const SYSTEM_PROMPT = `You are an expert IT interviewer evaluating candidate res
 5. Provide a comprehensive assessment that includes:
    - Overall score (0-100)
    - Pass/fail status (passing threshold: 75%)
+   - Candidate Overview with up to 5 hard skills and up to 5 soft skills from the entire interview
    - Detailed feedback for each answer
-   - Specific hard skills demonstrated
-   - Specific soft skills demonstrated
    - Areas for improvement
 
 Return the evaluation in this exact JSON format:
 {
   "overallScore": number between 0-100,
   "passed": boolean,
+  "candidateOverview": {
+    "hardSkills": ["up to 5 specific technical skills demonstrated across the entire interview"],
+    "softSkills": ["up to 5 specific soft skills demonstrated across the entire interview"]
+  },
   "questionResults": [
     {
       "question": "The exact question text",
       "score": number between 0-100,
-      "feedback": "Detailed feedback including specific hard and soft skills demonstrated",
+      "feedback": "Detailed feedback about the answer",
       "passed": boolean,
-      "notInList": boolean,
-      "hardSkills": ["list of specific technical skills demonstrated"],
-      "softSkills": ["list of specific soft skills demonstrated"]
+      "notInList": boolean
     }
   ]
 }
 
-IMPORTANT: For each answer, you MUST provide:
-1. At least 2-3 specific hard skills, even if they are basic or emerging
-2. At least 2-3 specific soft skills, even if they are basic or emerging
+IMPORTANT: For the Candidate Overview, you MUST provide:
+1. Up to 5 hard skills from the entire interview (can be fewer if fewer skills were demonstrated)
+2. Up to 5 soft skills from the entire interview (can be fewer if fewer skills were demonstrated)
 3. If a skill is only partially demonstrated, use phrases like:
    - "Basic understanding of [skill]"
    - "Emerging skills in [skill]"
    - "Potential for [skill]"
    - "Shows aptitude for [skill]"
-4. Never leave hardSkills or softSkills arrays empty
-5. Always analyze both explicit and implicit skills shown in the response`
+4. Never include skills that were not demonstrated
+5. Always analyze both explicit and implicit skills shown across all responses
+6. DO NOT combine similar skills - each skill must be distinct
+7. DO NOT include variations of the same skill
+8. DO NOT include skills that are not directly demonstrated in any response
+9. DO NOT pad the list with generic skills - only include skills that were actually demonstrated
+
+VALIDATION RULES:
+1. The candidateOverview.hardSkills array MUST contain between 0-5 items
+2. The candidateOverview.softSkills array MUST contain between 0-5 items
+3. No duplicate skills within each category
+4. Each skill must be specific and distinct
+5. Skills must be directly related to the interview responses
+6. Only include skills that were actually demonstrated`
 
 export async function POST(request: Request) {
   try {
@@ -216,9 +231,27 @@ Return the evaluation in the specified JSON format. For each answer, provide spe
                     notInList: {
                       type: "boolean",
                       description: "Whether the question was not in the original list"
+                    },
+                    hardSkills: {
+                      type: "array",
+                      items: {
+                        type: "string"
+                      },
+                      description: "List of EXACTLY 5 specific technical skills demonstrated",
+                      minItems: 5,
+                      maxItems: 5
+                    },
+                    softSkills: {
+                      type: "array",
+                      items: {
+                        type: "string"
+                      },
+                      description: "List of EXACTLY 5 specific soft skills demonstrated",
+                      minItems: 5,
+                      maxItems: 5
                     }
                   },
-                  required: ["question", "score", "feedback", "passed", "notInList"]
+                  required: ["question", "score", "feedback", "passed", "notInList", "hardSkills", "softSkills"]
                 }
               }
             },
