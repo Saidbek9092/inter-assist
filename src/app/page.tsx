@@ -605,27 +605,29 @@ export default function Home() {
   return (
     <div className="flex h-screen relative bg-gray-50 dark:bg-gray-950">
       {isInitialLoading ? renderSkeletonSidebar() : renderSidebar()}
-      <div className="flex-1 flex flex-col">
-        <button
-          className={`md:hidden fixed top-4 right-4 z-50 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 ${isSidebarOpen ? 'hidden' : 'block'}`}
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        >
-          <Menu className="h-6 w-6" />
-        </button>
+      <div className="flex-1 flex flex-col overflow-y-auto md:overflow-hidden">
+        <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-gray-50 dark:bg-gray-950 z-50 border-b border-gray-200 dark:border-gray-700">
+          <button
+            className={`absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 ${isSidebarOpen ? 'hidden' : 'block'}`}
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+        </div>
         {isInitialLoading ? renderSkeletonMainContent() : (
-          <main className="flex-1 p-0 md:p-8 overflow-hidden mt-16 md:mt-0">
-            <div className="w-full h-full md:max-w-[900px] md:mx-auto">
+          <main className="flex-1 p-0 md:p-8 mt-16 md:mt-0">
+            <div className="w-full h-full md:max-w-[900px]">
               <div className="bg-white dark:bg-gray-900 rounded-none md:rounded-2xl shadow-lg p-4 md:p-8 h-full flex flex-col">
                 <div className="flex-none">
                   <h1 className="text-2xl md:text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">Interview Questions Generator</h1>
                   <p className="text-gray-600 dark:text-gray-400 text-center mb-6 text-sm md:text-base">
-                    Enter a job description or keywords to generate tailored interview questions.
+                    Paste a job posting URL to generate tailored interview questions.
                   </p>
                   <div className="flex flex-col gap-3 mb-8">
                     <Input
                       type="text"
                       placeholder="Enter the job description link: e.g. https://jobs.com/software-engineer-123456"
-                      className={`text-base md:text-lg h-12 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 ${urlError ? 'border-gray-300 dark:border-gray-600' : ''}`}
+                      className={`text-base md:text-lg h-12 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${urlError ? 'border-gray-400 dark:border-gray-500' : ''}`}
                       value={url}
                       onChange={handleUrlChange}
                       onBlur={handleUrlBlur}
@@ -701,7 +703,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 min-h-0 md:max-h-[calc(100vh-400px)] overflow-y-auto">
                   {isGenerating && (
                     <div className="text-center py-8">
                       <div className="mb-4">
