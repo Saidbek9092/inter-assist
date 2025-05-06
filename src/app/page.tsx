@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Trash2, Mic, Loader2, Menu, XCircle, Sun, Moon } from "lucide-react"
+import { Plus, Trash2, Mic, Loader2, Menu, XCircle, Sun, Moon, Copy, Check } from "lucide-react"
 import { useState, useEffect } from "react"
 import {
   Dialog,
@@ -75,6 +75,7 @@ export default function Home() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     // Check for saved theme preference or system preference
@@ -623,7 +624,7 @@ export default function Home() {
                   <p className="text-gray-600 dark:text-gray-400 text-center mb-6 text-sm md:text-base">
                     Paste a job posting URL to generate tailored interview questions.
                   </p>
-                  <div className="flex flex-col gap-3 mb-8">
+                  <div className="flex flex-col gap-3 mb-4">
                     <Input
                       type="text"
                       placeholder="Enter the job description link: e.g. https://jobs.com/software-engineer-123456"
@@ -682,6 +683,25 @@ export default function Home() {
                             disabled={isUploading}
                           />
                         </label>
+                        {/* Copy questions icon/button */}
+                        {questions.length > 0 && (
+                          <div className="flex justify-end mt-2 -mb-2">
+                            <button
+                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-base font-medium transition-colors duration-150 shadow-sm cursor-pointer"
+                              onClick={async () => {
+                                const text = questions.map(q => q.text).join('\n');
+                                await navigator.clipboard.writeText(text);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 1500);
+                              }}
+                              title="Copy all questions"
+                              type="button"
+                            >
+                              {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+                              {copied ? 'Copied!' : 'Copy all questions'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -719,7 +739,7 @@ export default function Home() {
                   )}
 
                   {analysisResult && (
-                    <div className="mt-8 space-y-6">
+                    <div className="space-y-6">
                       <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div className="flex items-center gap-2">
                           {analysisResult.passed ? (
@@ -823,7 +843,7 @@ export default function Home() {
                   )}
 
                   {questions.length > 0 && (
-                    <div className="space-y-3 mt-8">
+                    <div className="space-y-3">
                       {questions.map((q, i) => (
                         <div key={q.id} className="space-y-2">
                           <div className="flex items-center gap-3 p-3.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700">
