@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Trash2, Mic, Loader2 } from "lucide-react"
+import { Plus, Trash2, Mic, Loader2, Menu, XCircle, Sun, Moon } from "lucide-react"
 import { useState, useEffect } from "react"
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 
 type Question = {
   id: string
@@ -73,6 +73,24 @@ export default function Home() {
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isUrlValid, setIsUrlValid] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    // Check for saved theme preference or system preference
+    const savedTheme = localStorage.getItem('theme');
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const initialTheme = savedTheme || systemTheme;
+    setTheme(initialTheme as 'light' | 'dark');
+    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    localStorage.setItem('theme', newTheme);
+  };
 
   useEffect(() => {
     const urlRegex = /\/role\/([^/]+)\/company\/([^/]+)/;
@@ -297,6 +315,7 @@ export default function Home() {
         setQuestions([]);
         setAnalysisResult(null);
         stopProgressAnimation();
+        setIsSidebarOpen(false);
       }
       return;
     }
@@ -317,6 +336,7 @@ export default function Home() {
     setQuestions([]);
     setAnalysisResult(null);
     stopProgressAnimation();
+    setIsSidebarOpen(false);
   }
 
   // Delete session handler
@@ -429,21 +449,37 @@ export default function Home() {
     const isProcessing = isLoading || isUploading;
     
     return (
-      <aside className="h-full w-64 bg-white border-r flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <span className="font-bold text-lg">Sessions</span>
-          <button
-            className="rounded-full p-2 hover:bg-gray-100 cursor-pointer"
-            title="New Session"
-            onClick={handleNewSession}
-            disabled={isProcessing}
-          >
-            <Plus className="h-5 w-5" />
-          </button>
+      <aside className={`fixed md:relative h-full w-full md:w-64 bg-white dark:bg-gray-900 border-b md:border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ease-in-out z-50
+        ${isSidebarOpen ? 'top-0' : '-top-full md:top-0'} md:translate-x-0`}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <span className="font-bold text-lg text-gray-900 dark:text-white">Sessions</span>
+          <div className="flex items-center gap-2">
+            <button
+              className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-gray-600 dark:text-gray-300"
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+            <button
+              className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-gray-600 dark:text-gray-300"
+              title="New Session"
+              onClick={handleNewSession}
+              disabled={isProcessing}
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+            <button
+              className="md:hidden rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-gray-600 dark:text-gray-300"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {sessions.length === 0 && (
-            <div className="text-gray-400 text-center mt-8">No sessions yet</div>
+            <div className="text-gray-400 dark:text-gray-500 text-center mt-8">No sessions yet</div>
           )}
           {Array.isArray(sessions) && sessions.map((session, idx) => {
             const date = new Date(session.createdAt);
@@ -456,25 +492,26 @@ export default function Home() {
             return (
               <div key={`${session.id}-${idx}`} className="group">
                 <button
-                  className={`w-full flex items-center justify-between px-4 py-3 border-b hover:bg-gray-50 cursor-pointer transition-colors duration-200 
-                    ${isCurrentSession ? 'bg-gray-100 font-semibold' : ''}
+                  className={`w-full flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors duration-200 
+                    ${isCurrentSession ? 'bg-gray-100 dark:bg-gray-800 font-semibold' : ''}
                     ${isProcessing && !isCurrentSession ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => {
                     if (!isProcessing || isCurrentSession) {
                       setActiveSessionId(session.id);
+                      setIsSidebarOpen(false);
                     }
                   }}
                   disabled={isProcessing && !isCurrentSession}
                   title={isProcessing && !isCurrentSession ? "Please wait until processing is complete" : ""}
                 >
                   <div>
-                    <div className="truncate text-sm font-medium">
+                    <div className="truncate text-sm font-medium text-gray-900 dark:text-white">
                       {getSessionTitle(sessions.length - idx - 1)}
                     </div>
-                    <div className="text-xs text-gray-400">{formattedDate}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500">{formattedDate}</div>
                   </div>
                   <span
-                    className={`p-2 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-transparent cursor-pointer hover:bg-gray-100 rounded-full
+                    className={`p-2 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full
                       ${isProcessing ? 'opacity-0' : ''}`}
                     title="Delete session"
                     onClick={e => { 
@@ -484,7 +521,7 @@ export default function Home() {
                       }
                     }}
                   >
-                    <Trash2 className="h-4 w-4 text-gray-600 hover:text-gray-800 transition-colors duration-200" />
+                    <Trash2 className="h-4 w-4 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-200" />
                   </span>
                 </button>
               </div>
@@ -493,11 +530,11 @@ export default function Home() {
         </div>
         {/* Delete confirmation dialog */}
         <Dialog open={!!deleteSessionId} onOpenChange={() => !isProcessing && setDeleteSessionId(null)}>
-          <DialogContent className="cursor-default">
+          <DialogContent className="cursor-default bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
             <DialogHeader>
               <DialogTitle>Delete Session</DialogTitle>
             </DialogHeader>
-            <div>Are you sure you want to delete this session? This action cannot be undone.</div>
+            <div className="text-gray-600 dark:text-gray-300">Are you sure you want to delete this session? This action cannot be undone.</div>
             <DialogFooter>
               <Button
                 variant="outline"
@@ -531,16 +568,16 @@ export default function Home() {
 
   // Add skeleton loading components
   const renderSkeletonSidebar = () => (
-    <aside className="h-full w-64 bg-white border-r flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
-        <div className="h-8 w-8 bg-gray-200 rounded-full animate-pulse"></div>
+    <aside className="fixed md:relative h-full w-full md:w-64 bg-white dark:bg-gray-900 border-b md:border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="p-4 border rounded-lg">
-            <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse mb-2"></div>
-            <div className="h-3 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+          <div key={i} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+            <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           </div>
         ))}
       </div>
@@ -566,235 +603,243 @@ export default function Home() {
 
   // Main content rendering
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen relative bg-gray-50 dark:bg-gray-950">
       {isInitialLoading ? renderSkeletonSidebar() : renderSidebar()}
-      {isInitialLoading ? renderSkeletonMainContent() : (
-        <main className="flex-1 p-8 overflow-hidden">
-          <div className="w-full h-full" style={{ maxWidth: 900 }}>
-            <div className="bg-white rounded-2xl shadow-lg p-8 h-full flex flex-col">
-              <div className="flex-none">
-                <h1 className="text-3xl font-bold text-center mb-2">Interview Questions Generator</h1>
-                <p className="text-gray-600 text-center mb-6">
-                  Enter a job description or keywords to generate tailored interview questions.
-                </p>
-                <div className="flex flex-col gap-3 mb-8">
-                  <Input
-                    type="text"
-                    placeholder="Enter the job description link: e.g. https://jobs.com/software-engineer-123456"
-                    className={`text-lg h-12 ${urlError ? 'border-gray-300' : ''}`}
-                    value={url}
-                    onChange={handleUrlChange}
-                    onBlur={handleUrlBlur}
-                    disabled={isLoading || questions.length > 0}
-                  />
-                  {urlError && (
-                    <p className="text-gray-800 text-sm mt-1 font-medium">{urlError}</p>
-                  )}
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={!isUrlValid || isLoading || questions.length > 0}
-                    className="text-lg px-6 h-12 cursor-pointer"
-                  >
-                    {isLoading ? "Generating..." : "Generate"}
-                  </Button>
+      <div className="flex-1 flex flex-col">
+        <button
+          className={`md:hidden fixed top-4 right-4 z-50 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 ${isSidebarOpen ? 'hidden' : 'block'}`}
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+        {isInitialLoading ? renderSkeletonMainContent() : (
+          <main className="flex-1 p-0 md:p-8 overflow-hidden mt-16 md:mt-0">
+            <div className="w-full h-full md:max-w-[900px] md:mx-auto">
+              <div className="bg-white dark:bg-gray-900 rounded-none md:rounded-2xl shadow-lg p-4 md:p-8 h-full flex flex-col">
+                <div className="flex-none">
+                  <h1 className="text-2xl md:text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">Interview Questions Generator</h1>
+                  <p className="text-gray-600 dark:text-gray-400 text-center mb-6 text-sm md:text-base">
+                    Enter a job description or keywords to generate tailored interview questions.
+                  </p>
+                  <div className="flex flex-col gap-3 mb-8">
+                    <Input
+                      type="text"
+                      placeholder="Enter the job description link: e.g. https://jobs.com/software-engineer-123456"
+                      className={`text-base md:text-lg h-12 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 ${urlError ? 'border-gray-300 dark:border-gray-600' : ''}`}
+                      value={url}
+                      onChange={handleUrlChange}
+                      onBlur={handleUrlBlur}
+                      disabled={isLoading || questions.length > 0}
+                    />
+                    {urlError && (
+                      <p className="text-gray-800 dark:text-gray-200 text-sm mt-1 font-medium">{urlError}</p>
+                    )}
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!isUrlValid || isLoading || questions.length > 0}
+                      className="text-base md:text-lg px-6 h-12 cursor-pointer"
+                    >
+                      {isLoading ? "Generating..." : "Generate"}
+                    </Button>
 
-                  {isLoading && (
-                    <div className="relative flex flex-col items-center justify-center py-8">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute top-0 right-0 text-gray-500 hover:text-gray-700 cursor-pointer text-base"
-                        onClick={handleCancelGeneration}
-                      >
-                        Cancel
-                      </Button>
-                      <Loader2 className="h-10 w-10 animate-spin text-gray-600 mb-4" />
-                      <p className="text-gray-600 text-lg">Generating questions...</p>
-                      <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
-                    </div>
-                  )}
-
-                  {(questions.length > 0 || analysisResult) && showUploadInput && (
-                    <div className="mt-4">
-                      <label
-                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                      >
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Mic className="w-8 h-8 mb-4 text-gray-500" />
-                          <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">Click to upload</span> or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500">MP3, WAV, M4A (MAX. 10MB)</p>
-                        </div>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="audio/*"
-                          onChange={handleFileUpload}
-                          disabled={isUploading}
-                        />
-                      </label>
-                    </div>
-                  )}
-
-                  {isUploading && (
-                    <div className="relative flex flex-col items-center justify-center py-8">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute top-0 right-0 text-gray-500 hover:text-gray-700 cursor-pointer text-base"
-                        onClick={handleCancelUpload}
-                      >
-                        Cancel
-                      </Button>
-                      <Loader2 className="h-10 w-10 animate-spin text-gray-600 mb-4" />
-                      <p className="text-gray-600 text-lg">Processing your audio...</p>
-                      <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto">
-                {isGenerating && (
-                  <div className="text-center py-8">
-                    <div className="mb-4">
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div
-                          className="bg-gray-600 h-2.5 rounded-full transition-all duration-300"
-                          style={{ width: '100%' }}
-                        ></div>
+                    {isLoading && (
+                      <div className="relative flex flex-col items-center justify-center py-8">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-0 right-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer text-base"
+                          onClick={handleCancelGeneration}
+                        >
+                          Cancel
+                        </Button>
+                        <Loader2 className="h-10 w-10 animate-spin text-gray-600 dark:text-gray-400 mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg">Generating questions...</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">This may take a few moments</p>
                       </div>
-                      <p className="text-sm text-gray-600 mt-2">Generating questions...</p>
-                    </div>
+                    )}
+
+                    {(questions.length > 0 || analysisResult) && showUploadInput && (
+                      <div className="mt-4">
+                        <label
+                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Mic className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" />
+                            <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                              <span className="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">MP3, WAV, M4A (MAX. 10MB)</p>
+                          </div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="audio/*"
+                            onChange={handleFileUpload}
+                            disabled={isUploading}
+                          />
+                        </label>
+                      </div>
+                    )}
+
+                    {isUploading && (
+                      <div className="relative flex flex-col items-center justify-center py-8">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-0 right-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer text-base"
+                          onClick={handleCancelUpload}
+                        >
+                          Cancel
+                        </Button>
+                        <Loader2 className="h-10 w-10 animate-spin text-gray-600 dark:text-gray-400 mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg">Processing your audio...</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">This may take a few moments</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
 
-                {analysisResult && (
-                  <div className="mt-8 space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        {analysisResult.passed ? (
-                          <CheckCircle2 className="w-6 h-6 text-green-500" />
-                        ) : (
-                          <XCircle className="w-6 h-6 text-red-500" />
-                        )}
-                        <span className="font-semibold text-lg">
-                          {analysisResult.passed ? 'Passed' : 'Failed'}
-                        </span>
-                      </div>
-                      <div className="text-2xl font-bold">
-                        {analysisResult.overallScore}/100
+                <div className="flex-1 overflow-y-auto">
+                  {isGenerating && (
+                    <div className="text-center py-8">
+                      <div className="mb-4">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                          <div
+                            className="bg-gray-600 dark:bg-gray-500 h-2.5 rounded-full transition-all duration-300"
+                            style={{ width: '100%' }}
+                          ></div>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Generating questions...</p>
                       </div>
                     </div>
+                  )}
 
-                    {/* Overview Section */}
-                    <div className="p-4 border rounded-lg bg-white">
-                      <h3 className="text-lg font-semibold mb-3">Candidate Overview</h3>
-                      <div className="space-y-2">
-                        <p className="text-gray-700">
+                  {analysisResult && (
+                    <div className="mt-8 space-y-6">
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-2">
                           {analysisResult.passed ? (
-                            "The candidate has demonstrated strong suitability for this role based on their responses. They showed good technical knowledge and communication skills."
+                            <CheckCircle2 className="w-6 h-6 text-green-500" />
                           ) : (
-                            "The candidate's responses indicate areas for improvement to better match the role requirements."
+                            <XCircle className="w-6 h-6 text-red-500" />
                           )}
-                        </p>
-                        <div className="mt-4">
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Hard Skills Assessment:</h4>
-                          <ul className="list-disc list-inside text-gray-600 space-y-1">
-                            {analysisResult.questionResults
-                              .filter(result => result.passed)
-                              .flatMap(result => result.hardSkills || [])
-                              .filter((skill, index, self) => self.indexOf(skill) === index) // Remove duplicates
-                              .map((skill, index) => (
-                                <li key={index}>{skill}</li>
-                              ))}
-                          </ul>
+                          <span className="font-semibold text-lg text-gray-900 dark:text-white">
+                            {analysisResult.passed ? 'Passed' : 'Failed'}
+                          </span>
                         </div>
-                        <div className="mt-4">
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Soft Skills Assessment:</h4>
-                          <ul className="list-disc list-inside text-gray-600 space-y-1">
-                            {analysisResult.questionResults
-                              .filter(result => result.passed)
-                              .flatMap(result => result.softSkills || [])
-                              .filter((skill, index, self) => self.indexOf(skill) === index) // Remove duplicates
-                              .map((skill, index) => (
-                                <li key={index}>{skill}</li>
-                              ))}
-                          </ul>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {analysisResult.overallScore}/100
                         </div>
-                        {!analysisResult.passed && (
+                      </div>
+
+                      {/* Overview Section */}
+                      <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Candidate Overview</h3>
+                        <div className="space-y-2">
+                          <p className="text-gray-700 dark:text-gray-300">
+                            {analysisResult.passed ? (
+                              "The candidate has demonstrated strong suitability for this role based on their responses. They showed good technical knowledge and communication skills."
+                            ) : (
+                              "The candidate's responses indicate areas for improvement to better match the role requirements."
+                            )}
+                          </p>
                           <div className="mt-4">
-                            <h4 className="font-medium text-sm text-gray-700 mb-2">Areas for Improvement:</h4>
-                            <ul className="list-disc list-inside text-gray-600 space-y-1">
+                            <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-2">Hard Skills Assessment:</h4>
+                            <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
                               {analysisResult.questionResults
-                                .filter(result => !result.passed)
-                                .map((result, index) => (
-                                  <li key={index}>
-                                    <span className="font-medium">{result.question.split('?')[0]}:</span> {result.feedback}
-                                  </li>
+                                .filter(result => result.passed)
+                                .flatMap(result => result.hardSkills || [])
+                                .filter((skill, index, self) => self.indexOf(skill) === index)
+                                .map((skill, index) => (
+                                  <li key={index}>{skill}</li>
                                 ))}
                             </ul>
                           </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      {analysisResult.questionResults.map((result, index) => (
-                        <div key={index} className="p-4 border rounded-lg">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold">Question {index + 1}</h3>
-                                {result.notInList && (
-                                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                    Extra question
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-gray-600 mt-1">{result.question}</p>
+                          <div className="mt-4">
+                            <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-2">Soft Skills Assessment:</h4>
+                            <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
+                              {analysisResult.questionResults
+                                .filter(result => result.passed)
+                                .flatMap(result => result.softSkills || [])
+                                .filter((skill, index, self) => self.indexOf(skill) === index)
+                                .map((skill, index) => (
+                                  <li key={index}>{skill}</li>
+                                ))}
+                            </ul>
+                          </div>
+                          {!analysisResult.passed && (
+                            <div className="mt-4">
+                              <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-2">Areas for Improvement:</h4>
+                              <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
+                                {analysisResult.questionResults
+                                  .filter(result => !result.passed)
+                                  .map((result, index) => (
+                                    <li key={index}>
+                                      <span className="font-medium">{result.question.split('?')[0]}:</span> {result.feedback}
+                                    </li>
+                                  ))}
+                              </ul>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {result.passed ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                              ) : (
-                                <XCircle className="w-5 h-5 text-red-500" />
-                              )}
-                              <span>{result.score}/100</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {analysisResult.questionResults.map((result, index) => (
+                          <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-gray-900 dark:text-white">Question {index + 1}</h3>
+                                  {result.notInList && (
+                                    <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+                                      Extra question
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-gray-600 dark:text-gray-400 mt-1">{result.question}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {result.passed ? (
+                                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                ) : (
+                                  <XCircle className="w-5 h-5 text-red-500" />
+                                )}
+                                <span className="text-gray-900 dark:text-white">{result.score}/100</span>
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-1">Feedback:</h4>
+                              <p className="text-gray-600 dark:text-gray-400">{result.feedback}</p>
                             </div>
                           </div>
-                          <div className="mt-3">
-                            <h4 className="font-medium text-sm text-gray-700 mb-1">Feedback:</h4>
-                            <p className="text-gray-600">{result.feedback}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {questions.length > 0 && (
+                    <div className="space-y-3 mt-8">
+                      {questions.map((q, i) => (
+                        <div key={q.id} className="space-y-2">
+                          <div className="flex items-center gap-3 p-3.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 dark:bg-gray-700 text-white font-semibold">
+                              {i + 1}
+                            </span>
+                            <span className="text-base flex items-center h-full text-gray-900 dark:text-white">{q.text}</span>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {questions.length > 0 && (
-                  <div className="space-y-3 mt-8">
-                    {questions.map((q, i) => (
-                      <div key={q.id} className="space-y-2">
-                        <div className="flex items-center gap-3 p-3.5 border rounded-lg bg-gray-50 transition-colors duration-200 hover:bg-gray-100">
-                          <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white font-semibold">
-                            {i + 1}
-                          </span>
-                              <span className="text-base flex items-center h-full">{q.text}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </main>
-      )}
+          </main>
+        )}
+      </div>
     </div>
   )
 }
