@@ -677,7 +677,7 @@ export default function Home() {
             <Menu className="h-6 w-6" />
           </button>
           <button
-            className={`absolute top-4 left-16 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-gray-600 dark:text-gray-300 ${isSidebarOpen ? 'hidden' : 'block'}`}
+            className={`absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-base font-medium transition-colors duration-150 shadow-sm cursor-pointer ${isSidebarOpen ? 'hidden' : 'block'}`}
             onClick={toggleTheme}
             title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
           >
