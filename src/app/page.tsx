@@ -512,7 +512,7 @@ export default function Home() {
           <span className="font-bold text-lg text-gray-900 dark:text-white">Sessions</span>
           <div className="flex items-center gap-2">
             <button
-              className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-gray-600 dark:text-gray-300"
+              className="hidden md:flex rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-gray-600 dark:text-gray-300"
               onClick={toggleTheme}
               title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
             >
@@ -568,13 +568,15 @@ export default function Home() {
                     <div className="text-xs text-gray-400 dark:text-gray-500">{formattedDate}</div>
                   </div>
                   <span
-                    className={`p-2 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full
+                    className={`p-2 transition-all duration-200 bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full
                       ${isProcessing ? 'opacity-0' : ''}`}
                     title="Delete session"
-                    onClick={e => { 
+                    onClick={(e) => { 
+                      e.preventDefault();
                       e.stopPropagation(); 
                       if (!isProcessing) {
-                        setDeleteSessionId(session.id); 
+                        setDeleteSessionId(session.id);
+                        setIsSidebarOpen(false); // Close sidebar when delete dialog opens
                       }
                     }}
                   >
@@ -586,7 +588,11 @@ export default function Home() {
           })}
         </div>
         {/* Delete confirmation dialog */}
-        <Dialog open={!!deleteSessionId} onOpenChange={() => !isProcessing && setDeleteSessionId(null)}>
+        <Dialog open={!!deleteSessionId} onOpenChange={(open) => {
+          if (!open && !isProcessing) {
+            setDeleteSessionId(null);
+          }
+        }}>
           <DialogContent className="cursor-default bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
             <DialogHeader>
               <DialogTitle>Delete Session</DialogTitle>
@@ -669,6 +675,13 @@ export default function Home() {
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
             <Menu className="h-6 w-6" />
+          </button>
+          <button
+            className={`absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-gray-600 dark:text-gray-300 ${isSidebarOpen ? 'hidden' : 'block'}`}
+            onClick={toggleTheme}
+            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </button>
         </div>
         {isInitialLoading ? renderSkeletonMainContent() : (
