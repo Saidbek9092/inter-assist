@@ -450,7 +450,7 @@ export default function Home() {
     
     return (
       <aside className={`fixed md:relative h-full w-full md:w-64 bg-white dark:bg-gray-900 border-b md:border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ease-in-out z-[60]
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="sticky top-0 left-0 right-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between p-4">
           <span className="font-bold text-lg text-gray-900 dark:text-white">Sessions</span>
           <div className="flex items-center gap-2">
@@ -568,7 +568,7 @@ export default function Home() {
 
   // Add skeleton loading components
   const renderSkeletonSidebar = () => (
-    <aside className="fixed md:relative h-full w-full md:w-64 bg-white dark:bg-gray-900 border-b md:border-r border-gray-200 dark:border-gray-700 flex flex-col">
+    <aside className={`fixed md:relative h-full w-full md:w-64 bg-white dark:bg-gray-900 border-b md:border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ease-in-out z-[60] -translate-x-full md:translate-x-0`}>
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
         <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
