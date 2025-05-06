@@ -590,7 +590,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-lg p-8 h-full flex flex-col">
           <div className="flex-none">
             <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mx-auto mb-2"></div>
-            <div className="h-4 w-96 bg-gray-200 rounded animate-pulse mx-auto mb-6"></div>
+            <div className="h-4 w-full md:w-96 bg-gray-200 rounded animate-pulse mx-auto mb-6 border-b-2 border-gray-200 md:border-0"></div>
             <div className="flex flex-col gap-3 mb-8">
               <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
               <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
