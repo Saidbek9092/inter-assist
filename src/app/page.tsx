@@ -100,33 +100,20 @@ export default function Home() {
   // Load sessions from MongoDB on mount
   useEffect(() => {
     async function fetchSessions() {
-      console.log("Fetching sessions from API...");
       try {
         const res = await fetch('/api/sessions');
         const data = await res.json();
-        console.log("Received sessions data:", data);
 
         if (Array.isArray(data)) {
           const sessionsWithQuestions = data.filter(session => session.questions && session.questions.length > 0);
-          console.log(`Setting ${sessionsWithQuestions.length} sessions with questions:`,
-            sessionsWithQuestions.map(s => ({
-              id: s.id,
-              timestamp: s.createdAt,
-              date: new Date(s.createdAt).toISOString(),
-              questionCount: s.questions.length
-            }))
-          );
           setSessions(sessionsWithQuestions);
           if (sessionsWithQuestions.length > 0) {
-            console.log("Setting active session ID:", sessionsWithQuestions[0].id);
             setActiveSessionId(sessionsWithQuestions[0].id);
           }
         } else {
-          console.error("Failed to load sessions:", data.error);
           setSessions([]);
         }
-      } catch (error) {
-        console.error("Error fetching sessions:", error);
+      } catch {
         setSessions([]);
       } finally {
         setIsInitialLoading(false);
@@ -207,7 +194,6 @@ export default function Home() {
   const generateQuestions = async () => {
     try {
       setIsLoading(true);
-      console.log("Starting question generation for URL:", url);
 
       const response = await fetch('/api/generate-questions', {
         method: 'POST',
@@ -223,7 +209,6 @@ export default function Home() {
       }
 
       const data = await response.json();
-      console.log("Received questions from API:", data.questions);
 
       const generatedQuestions: Question[] = (data.questions || []).map((text: string, index: number) => ({
         id: `q${index + 1}`,
@@ -247,18 +232,11 @@ export default function Home() {
         });
 
         if (!saveRes.ok) {
-          const errorText = await saveRes.text();
-          console.error('Save failed:', errorText);
-          // setError('Failed to save session to database. Please check your backend/API.');
+          await saveRes.text();
           return;
         }
 
         const savedSession = await saveRes.json();
-        console.log("New session created successfully:", {
-          id: savedSession.id,
-          timestamp: savedSession.createdAt,
-          date: new Date(savedSession.createdAt).toISOString()
-        });
 
         // Update sessions list with the new session
         setSessions(prev => [savedSession, ...prev]);
@@ -280,18 +258,11 @@ export default function Home() {
         });
 
         if (!saveRes.ok) {
-          const errorText = await saveRes.text();
-          console.error('Save failed:', errorText);
-          // setError('Failed to save session to database. Please check your backend/API.');
+          await saveRes.text();
           return;
         }
 
         const savedSession = await saveRes.json();
-        console.log("Session updated successfully:", {
-          id: savedSession.id,
-          timestamp: savedSession.createdAt,
-          date: new Date(savedSession.createdAt).toISOString()
-        });
 
         // Update sessions list with the updated session
         const updatedSessions = sessions.map(session =>
@@ -300,11 +271,7 @@ export default function Home() {
         setSessions(updatedSessions);
         setQuestions(generatedQuestions);
       }
-
-      // setError(null);
-    } catch (error) {
-      console.error('Error in generateQuestions:', error);
-      // setError('Failed to generate questions. Please check your backend/API.');
+    } catch {
     } finally {
       setIsLoading(false);
     }
@@ -334,18 +301,12 @@ export default function Home() {
       return;
     }
 
-    console.log("Creating new empty session...");
     const newSession: Session = {
       id: generateUniqueId(),
       jobDescription: "",
       questions: [],
       createdAt: Date.now(),
     }
-    console.log("New session created:", {
-      id: newSession.id,
-      timestamp: newSession.createdAt,
-      date: new Date(newSession.createdAt).toISOString()
-    });
 
     // Update sessions list with the new session
     setSessions(prev => [newSession, ...prev]);
@@ -364,7 +325,6 @@ export default function Home() {
 
     try {
       setIsDeleting(true);
-      console.log("Deleting session:", deleteSessionId);
       const response = await fetch(`/api/sessions?id=${deleteSessionId}`, {
         method: 'DELETE'
       });
@@ -382,8 +342,6 @@ export default function Home() {
       }
 
       const updatedSessions = await sessionsResponse.json();
-      console.log("Updated sessions after deletion:", updatedSessions);
-
       setSessions(updatedSessions);
 
       // If the deleted session was active, clear selection
@@ -393,8 +351,7 @@ export default function Home() {
         setQuestions([]);
       }
 
-    } catch (err) {
-      console.error("Error deleting session:", err);
+    } catch {
     } finally {
       setIsDeleting(false);
       setDeleteSessionId(null);
@@ -423,8 +380,6 @@ export default function Home() {
         formData.append('audio', selectedFile);
         formData.append('questions', JSON.stringify(questions));
 
-        console.log('Questions being sent to API:', questions.map(q => q.text));
-
         const response = await fetch('/api/analyze-audio', {
           method: 'POST',
           body: formData,
@@ -437,7 +392,6 @@ export default function Home() {
         const result: AudioAnalysisResponse = await response.json();
         setAnalysisResult(result.analysis);
       } catch {
-        // Error handling removed since we're not using the error
       } finally {
         setIsUploading(false);
         setIsGenerating(false);
@@ -472,7 +426,6 @@ export default function Home() {
 
   // Sidebar rendering
   const renderSidebar = () => {
-    console.log("Rendering sidebar with sessions:", sessions);
     const isProcessing = isLoading || isUploading;
     
     return (
@@ -493,7 +446,6 @@ export default function Home() {
             <div className="text-gray-400 text-center mt-8">No sessions yet</div>
           )}
           {Array.isArray(sessions) && sessions.map((session, idx) => {
-            console.log("Rendering session:", session);
             const date = new Date(session.createdAt);
             const formattedDate = isNaN(date.getTime())
               ? 'Invalid date'
