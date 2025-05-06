@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Trash2, Mic, Loader2, Menu, XCircle, Sun, Moon, Copy, Check } from "lucide-react"
-import { useState, useEffect } from "react"
+import { Plus, Trash2, Mic, Loader2, Menu, XCircle, Sun, Moon, Copy, Check, FileDown, FileText } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { CheckCircle2 } from 'lucide-react'
+import jsPDF from "jspdf"
+import { Document, Packer, Paragraph, TextRun } from "docx"
+import { saveAs } from "file-saver"
 
 type Question = {
   id: string
@@ -76,6 +79,7 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
+  const questionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Check for saved theme preference or system preference
@@ -445,6 +449,58 @@ export default function Home() {
     handleFileUpload(e);
   }
 
+  // Handler for Word export
+  const handleExportWord = async () => {
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: "Interview Questions", bold: true, size: 32 }),
+              ],
+              spacing: { after: 300 },
+            }),
+            ...questions.map((q, i) =>
+              new Paragraph({
+                children: [
+                  new TextRun({ text: `${i + 1}. ${q.text}`, size: 28 }),
+                ],
+                spacing: { after: 200 },
+              })
+            ),
+          ],
+        },
+      ],
+    });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, "interview-questions.docx");
+  };
+
+  const handleExportPdf = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Interview Questions", 10, 20);
+    doc.setFontSize(12);
+
+    let y = 30;
+    const lineHeight = 10;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginBottom = 20;
+
+    questions.forEach((q, i) => {
+      if (y > pageHeight - marginBottom) {
+        doc.addPage();
+        y = 20; // Reset y for new page
+      }
+      doc.text(`${i + 1}. ${q.text}`, 10, y);
+      y += lineHeight;
+    });
+
+    doc.save("interview-questions.pdf");
+  };
+
   // Sidebar rendering
   const renderSidebar = () => {
     const isProcessing = isLoading || isUploading;
@@ -683,9 +739,9 @@ export default function Home() {
                             disabled={isUploading}
                           />
                         </label>
-                        {/* Copy questions icon/button */}
+                        {/* Copy questions icon/button and export buttons */}
                         {questions.length > 0 && (
-                          <div className="flex justify-end mt-2 -mb-2">
+                          <div className="flex justify-end mt-2 -mb-2 gap-2">
                             <button
                               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-base font-medium transition-colors duration-150 shadow-sm cursor-pointer"
                               onClick={async () => {
@@ -694,11 +750,29 @@ export default function Home() {
                                 setCopied(true);
                                 setTimeout(() => setCopied(false), 1500);
                               }}
-                              title="Copy all questions"
+                              title="Copy list"
                               type="button"
                             >
                               {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
-                              {copied ? 'Copied!' : 'Copy all questions'}
+                              <span className="hidden md:inline">Copy list</span>
+                            </button>
+                            <button
+                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-base font-medium transition-colors duration-150 shadow-sm cursor-pointer"
+                              onClick={handleExportPdf}
+                              title="Download PDF"
+                              type="button"
+                            >
+                              <FileDown className="w-5 h-5" />
+                              <span className="hidden md:inline">Download PDF</span>
+                            </button>
+                            <button
+                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-base font-medium transition-colors duration-150 shadow-sm cursor-pointer"
+                              onClick={handleExportWord}
+                              title="Download Word"
+                              type="button"
+                            >
+                              <FileText className="w-5 h-5" />
+                              <span className="hidden md:inline">Download Word</span>
                             </button>
                           </div>
                         )}
@@ -843,7 +917,7 @@ export default function Home() {
                   )}
 
                   {questions.length > 0 && (
-                    <div className="space-y-3">
+                    <div ref={questionsRef} className="space-y-3">
                       {questions.map((q, i) => (
                         <div key={q.id} className="space-y-2">
                           <div className="flex items-center gap-3 p-3.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700">
