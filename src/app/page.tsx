@@ -300,7 +300,7 @@ export default function Home() {
         setSessions(updatedSessions);
         setQuestions(generatedQuestions);
       }
-    } catch (error) {
+    } catch {
       setUrlError('An error occurred while generating questions. Please try again.');
     } finally {
       setIsLoading(false);
