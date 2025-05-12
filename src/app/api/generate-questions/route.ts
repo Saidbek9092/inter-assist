@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import * as cheerio from 'cheerio'
 
 // Validate API key
 const apiKey = process.env.OPENAI_API_KEY
@@ -13,9 +14,45 @@ const openai = apiKey ? new OpenAI({
   apiKey: apiKey,
 }) : null
 
-const SYSTEM_PROMPT = `You are an expert IT interviewer. Your task is to analyze IT job descriptions and generate very short, simple, and clear interview questions. Each question should be a single sentence, ideally no more than 25 words. Avoid complex or multi-part questions. Focus on the most essential technical and soft skills for the role. Generate at least 50 questions that comprehensively cover all requirements and must-have skills from the job description.`
+const SYSTEM_PROMPT = `You are an expert IT interviewer. Your task is to analyze the job description and generate specific, targeted interview questions. Follow these rules:
+1. Extract key technical terms, tools, and requirements from the job description
+2. Create questions that directly reference these specific terms
+3. Focus on the exact technologies, frameworks, and tools mentioned
+4. Include questions about specific years of experience mentioned
+5. Reference specific responsibilities and requirements
+6. Each question should be a single sentence, ideally no more than 25 words
+7. Avoid generic questions that could apply to any job
+8. Generate at least 50 questions that cover all specific requirements
 
-const USER_PROMPT = (url: string) => `Analyze the following IT job description URL and generate 50 concise, simple, and clear interview questions. Each question should be a single sentence, ideally no more than 25 words. Avoid complex or multi-part questions. Cover all requirements and must-have skills from the job description.\n\nURL: ${url}\n\nReturn the response in this exact JSON format:\n{\n  "questions": [\n    "question1",\n    "question2",\n    ... up to 50 questions ...\n    "question50"\n  ]\n}`
+Example of good specific questions:
+- "How many years of experience do you have with [specific technology]?"
+- "Can you describe your experience with [specific tool] mentioned in the requirements?"
+- "How have you used [specific framework] in your previous projects?"
+- "What is your approach to [specific responsibility] mentioned in the job description?"`
+
+const USER_PROMPT = (jobDescription: string) => `Analyze the following job description and generate 50 specific interview questions. Each question should directly reference the technologies, tools, requirements, and responsibilities mentioned in the job description. Avoid generic questions.
+
+Job Description:
+${jobDescription}
+
+First, identify these key elements from the job description:
+1. Specific technologies and tools mentioned
+2. Required years of experience
+3. Specific responsibilities
+4. Required skills and qualifications
+5. Nice-to-have requirements
+
+Then generate questions that directly reference these elements.
+
+Return the response in this exact JSON format:
+{
+  "questions": [
+    "question1",
+    "question2",
+    ... up to 50 questions ...
+    "question50"
+  ]
+}`
 
 // Sample questions to return if API is not available
 const SAMPLE_QUESTIONS = {
@@ -75,6 +112,163 @@ const SAMPLE_QUESTIONS = {
   ]
 }
 
+// Function to fetch and parse HTML content
+async function fetchJobDescription(url: string): Promise<string> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.statusText}`)
+    }
+    
+    const html = await response.text()
+    const $ = cheerio.load(html)
+    
+    // Remove script and style elements
+    $('script').remove()
+    $('style').remove()
+    
+    // Common job-related keywords to look for
+    const jobKeywords = [
+      'responsibilities',
+      'requirements',
+      'qualifications',
+      'job description',
+      'about the role',
+      'what you\'ll do',
+      'what you will do',
+      'key responsibilities',
+      'required skills',
+      'desired skills',
+      'minimum qualifications',
+      'preferred qualifications',
+      'about the position',
+      'role description',
+      'position overview'
+    ]
+
+    // Function to check if text contains job-related content
+    const isJobContent = (text: string): boolean => {
+      const lowerText = text.toLowerCase()
+      return jobKeywords.some(keyword => lowerText.includes(keyword)) &&
+             text.length > 200 && // Minimum length to ensure it's actual content
+             !text.includes('cookie') && // Exclude cookie notices
+             !text.includes('privacy policy') // Exclude privacy policies
+    }
+
+    // Function to clean text content
+    const cleanText = (text: string): string => {
+      return text
+        .replace(/\s+/g, ' ')
+        .replace(/\n+/g, '\n')
+        .trim()
+    }
+
+    // Try to find the main content area first
+    const mainContentSelectors = [
+      'main',
+      '[role="main"]',
+      '.main-content',
+      '.content',
+      '#content',
+      '.container',
+      '.wrapper',
+      'article',
+      '.article'
+    ]
+
+    for (const selector of mainContentSelectors) {
+      const content = cleanText($(selector).text())
+      if (isJobContent(content)) {
+        console.log(`✅ Found job description in main content area: ${selector}`)
+        return content
+      }
+    }
+
+    // Try common job description selectors
+    const commonSelectors = [
+      // Data attributes
+      '[data-automation-id*="job"]',
+      '[data-test*="job"]',
+      '[data-cy*="job"]',
+      // Common classes
+      '[class*="job-description"]',
+      '[class*="jobDetails"]',
+      '[class*="description"]',
+      '[class*="content"]',
+      // Common IDs
+      '[id*="job-description"]',
+      '[id*="jobDetails"]',
+      '[id*="description"]',
+      // Schema.org
+      '[itemprop="description"]',
+      // Common elements
+      '.job-description',
+      '.job-details',
+      '.description',
+      '.content',
+      '#jobDescription',
+      '#jobDetails'
+    ]
+
+    for (const selector of commonSelectors) {
+      const content = cleanText($(selector).text())
+      if (isJobContent(content)) {
+        console.log(`✅ Found job description using selector: ${selector}`)
+        return content
+      }
+    }
+
+    // If no specific selectors work, try to find any element with job-related content
+    const allElements = $('div, section, article, main')
+    for (let i = 0; i < allElements.length; i++) {
+      const element = allElements[i]
+      const text = cleanText($(element).text())
+      if (isJobContent(text)) {
+        console.log('✅ Found job description in element content')
+        return text
+      }
+    }
+
+    // Last resort: Get all text content and try to find the most relevant section
+    const bodyText = cleanText($('body').text())
+    if (bodyText.length > 200) {
+      // Split the text into paragraphs and find the one with most job-related keywords
+      const paragraphs = bodyText.split(/\n\s*\n/)
+      let bestParagraph = ''
+      let maxKeywords = 0
+
+      for (const paragraph of paragraphs) {
+        const keywordCount = jobKeywords.filter(keyword => 
+          paragraph.toLowerCase().includes(keyword)
+        ).length
+
+        if (keywordCount > maxKeywords && paragraph.length > 200) {
+          maxKeywords = keywordCount
+          bestParagraph = paragraph
+        }
+      }
+
+      if (bestParagraph) {
+        console.log('⚠️ Using best matching paragraph from body text')
+        return bestParagraph
+      }
+
+      console.log('⚠️ Using fallback: extracted all body text')
+      return bodyText
+    }
+    
+    throw new Error('Could not find job description content')
+  } catch (error) {
+    console.error('Error fetching job description:', error)
+    throw error
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { url } = await request.json()
@@ -89,8 +283,17 @@ export async function POST(request: Request) {
     // If API key is not available, return sample questions
     if (!openai) {
       console.warn('⚠️ OPENAI_API_KEY not set, returning sample questions')
+      console.log('📋 Sample Questions:')
+      SAMPLE_QUESTIONS.questions.forEach((q, i) => {
+        console.log(`${i + 1}. ${q}`)
+      })
       return NextResponse.json(SAMPLE_QUESTIONS)
     }
+
+    console.log('🔄 Fetching job description from URL...')
+    const jobDescription = await fetchJobDescription(url)
+    console.log('✅ Successfully fetched job description')
+    console.log('📝 Job Description Preview:', jobDescription.substring(0, 200) + '...')
 
     console.log('🔄 Making request to OpenAI API...')
     const completion = await openai.chat.completions.create({
@@ -101,7 +304,7 @@ export async function POST(request: Request) {
         },
         {
           role: "user",
-          content: USER_PROMPT(url)
+          content: USER_PROMPT(jobDescription)
         }
       ],
       model: "gpt-3.5-turbo",
@@ -118,6 +321,10 @@ export async function POST(request: Request) {
 
     const questions = JSON.parse(response)
     console.log('📊 Generated questions:', questions.questions.length)
+    console.log('\n📋 Generated Questions:')
+    questions.questions.forEach((q: string, i: number) => {
+      console.log(`${i + 1}. ${q}`)
+    })
     
     // Validate the response structure
     if (!questions.questions || !Array.isArray(questions.questions) || questions.questions.length < 45) {
@@ -132,6 +339,10 @@ export async function POST(request: Request) {
     // If there's an error with OpenAI, return sample questions
     if (error instanceof Error && error.message.includes('OpenAI')) {
       console.warn('⚠️ OpenAI error, returning sample questions')
+      console.log('📋 Sample Questions:')
+      SAMPLE_QUESTIONS.questions.forEach((q, i) => {
+        console.log(`${i + 1}. ${q}`)
+      })
       return NextResponse.json(SAMPLE_QUESTIONS)
     }
 

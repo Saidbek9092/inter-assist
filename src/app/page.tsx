@@ -217,6 +217,7 @@ export default function Home() {
   const generateQuestions = async () => {
     try {
       setIsLoading(true);
+      setUrlError(null); // Clear any previous errors
 
       const response = await fetch('/api/generate-questions', {
         method: 'POST',
@@ -228,7 +229,12 @@ export default function Home() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to generate questions');
+        if (errorData.details?.includes('Could not find job description content')) {
+          setUrlError('Oops! Your link is not available. Please use the correct link to get questions.');
+        } else {
+          setUrlError(errorData.details || 'Failed to generate questions');
+        }
+        return;
       }
 
       const data = await response.json();
@@ -294,7 +300,8 @@ export default function Home() {
         setSessions(updatedSessions);
         setQuestions(generatedQuestions);
       }
-    } catch {
+    } catch (error) {
+      setUrlError('An error occurred while generating questions. Please try again.');
     } finally {
       setIsLoading(false);
     }
